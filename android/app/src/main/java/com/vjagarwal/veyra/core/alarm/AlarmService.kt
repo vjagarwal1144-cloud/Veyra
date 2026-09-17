@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -11,7 +12,6 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.vjagarwal.veyra.MainActivity
 
 class AlarmService : Service() {
     private var player: MediaPlayer? = null
@@ -28,21 +28,18 @@ class AlarmService : Service() {
         }
 
         val stop = PendingIntent.getService(
-            this, 9, Intent(this, AlarmService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val open = PendingIntent.getActivity(
-            this, 10, Intent(this, MainActivity::class.java),
+            this,
+            9,
+            Intent(this, AlarmService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("Veyra alarm")
-            .setContentText("You are inside your protected wake zone")
+            .setContentText("Protected wake alarm is active")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setOngoing(true)
-            .setFullScreenIntent(open, true)
             .addAction(0, "Stop", stop)
             .build()
 
@@ -57,14 +54,14 @@ class AlarmService : Service() {
 
     private fun startAlarmTone() {
         if (player?.isPlaying == true) return
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        if (uri == null) return
-
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            ?: return
         player = MediaPlayer().apply {
             setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
             )
             setDataSource(this@AlarmService, uri)
@@ -93,14 +90,18 @@ class AlarmService : Service() {
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL, "Veyra Alarm", NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(CHANNEL, "Veyra Alarm Service", NotificationManager.IMPORTANCE_HIGH)
             )
         }
     }
 
     companion object {
-        const val CHANNEL = "veyra_alarm"
+        const val CHANNEL = "veyra_alarm_service"
         const val ACTION_START = "START"
         const val ACTION_STOP = "STOP"
+
+        fun stopIfRunning(context: Context) {
+            context.stopService(Intent(context, AlarmService::class.java))
+        }
     }
 }
