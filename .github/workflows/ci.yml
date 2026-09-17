@@ -30,6 +30,12 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Restore Firebase Android configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON"
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
       - uses: gradle/actions/setup-gradle@v4
       - name: Build Android debug
         working-directory: android
