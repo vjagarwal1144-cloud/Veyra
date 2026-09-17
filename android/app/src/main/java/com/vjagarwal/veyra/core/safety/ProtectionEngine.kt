@@ -33,10 +33,11 @@ class ProtectionEngine(
         val moving = location.hasSpeed() && location.speed >= 0.5f
         val proximity = (1f - (distance / (safeRadius * 2f))).coerceIn(0f, 1f)
         val directionBonus = if (previous != null && location.hasBearing()) {
-            val bearingToDestination = location.bearingTo(Location("destination").apply {
+            val target = Location("destination").apply {
                 latitude = destinationLat
                 longitude = destinationLon
-            })
+            }
+            val bearingToDestination = location.bearingTo(target)
             val delta = abs((location.bearing - bearingToDestination + 540f) % 360f - 180f)
             if (delta <= 60f) 0.10f else 0f
         } else 0f
@@ -44,8 +45,8 @@ class ProtectionEngine(
         val confidence = (
             proximity * 0.50f +
                 (1f - uncertaintyPenalty) * 0.25f +
-                if (closing) 0.15f else 0f +
-                if (moving) 0.05f else 0f +
+                (if (closing) 0.15f else 0f) +
+                (if (moving) 0.05f else 0f) +
                 directionBonus
             ).coerceIn(0f, 1f)
 
