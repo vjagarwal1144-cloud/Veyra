@@ -76,6 +76,8 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
+    implementation("org.maplibre.gl:android-sdk:13.3.1")
+
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-crashlytics")
