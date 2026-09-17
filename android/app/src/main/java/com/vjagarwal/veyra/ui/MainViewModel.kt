@@ -16,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import com.vjagarwal.veyra.VeyraApplication
 import com.vjagarwal.veyra.core.alarm.AlarmScheduler
 import com.vjagarwal.veyra.core.common.JourneyPrefs
+import com.vjagarwal.veyra.core.destination.DestinationSearch
 import com.vjagarwal.veyra.core.location.TrackingService
 import com.vjagarwal.veyra.data.JourneyEntity
 import com.vjagarwal.veyra.data.firebase.FirebaseTelemetry
@@ -44,9 +45,35 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
     private val _plan = MutableStateFlow(Plan())
     val plan: StateFlow<Plan> = _plan.asStateFlow()
 
+    private val _searchResults = MutableStateFlow<List<DestinationSearch.Result>>(emptyList())
+    val searchResults: StateFlow<List<DestinationSearch.Result>> = _searchResults.asStateFlow()
+    private val _searching = MutableStateFlow(false)
+    val searching: StateFlow<Boolean> = _searching.asStateFlow()
+
     init { refreshSafetyState() }
 
     fun update(plan: Plan) { _plan.value = plan }
+
+    fun searchDestinations(query: String) {
+        if (query.trim().length < 2) {
+            _searchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _searching.value = true
+            _searchResults.value = runCatching { DestinationSearch.search(query) }.getOrDefault(emptyList())
+            _searching.value = false
+        }
+    }
+
+    fun selectDestination(result: DestinationSearch.Result) {
+        _plan.value = _plan.value.copy(
+            name = result.name,
+            lat = result.latitude.toString(),
+            lon = result.longitude.toString()
+        )
+        _searchResults.value = emptyList()
+    }
 
     private fun fullScreenAlarmReady(context: Application): Boolean =
         Build.VERSION.SDK_INT < 34 || context.getSystemService(NotificationManager::class.java)?.canUseFullScreenIntent() == true
