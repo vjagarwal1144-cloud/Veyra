@@ -76,7 +76,7 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    implementation("org.maplibre.gl:android-sdk:13.3.1")
+    implementation("androidx.webkit:webkit:1.12.1")
 
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
