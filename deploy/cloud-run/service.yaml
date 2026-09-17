@@ -1,0 +1,40 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: veyra-backend
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/veyra/backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: veyra-supabase-url
+                  key: latest
+            - name: SUPABASE_ANON_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: veyra-supabase-anon-key
+                  key: latest
+            - name: SUPABASE_SERVICE_ROLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: veyra-supabase-service-role-key
+                  key: latest
+            - name: GOOGLE_MAPS_SERVER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: veyra-google-maps-key
+                  key: latest
+            - name: FIREBASE_SERVICE_ACCOUNT_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: veyra-firebase-service-account
+                  key: latest
