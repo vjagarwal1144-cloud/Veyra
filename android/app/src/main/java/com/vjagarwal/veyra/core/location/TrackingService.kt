@@ -25,6 +25,7 @@ import com.vjagarwal.veyra.data.JourneyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class TrackingService : Service() {
@@ -105,7 +106,6 @@ class TrackingService : Service() {
             }
 
             if (decision.distanceMeters <= currentWakeDistance * 3f) {
-                // Increase tracking density near the destination without making the whole journey high-power.
                 client.removeLocationUpdates(this)
                 requestUpdates()
             }
