@@ -1,0 +1,13 @@
+version: 1.0
+runtime: corretto17
+build:
+  commands:
+    build:
+      - cd backend && gradle clean bootJar --no-daemon
+run:
+  command: java -jar backend/build/libs/veyra-backend-*.jar
+  network:
+    port: 8080
+  env:
+    - name: PORT
+      value: "8080"
