@@ -1,8 +1,8 @@
 package com.vjagarwal.veyra.core.alarm
 
 import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -27,10 +27,14 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        }
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
         startAlarmFeedback()
 
         val reason = intent.getStringExtra("reason") ?: "Protected wake zone reached"
