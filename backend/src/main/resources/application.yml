@@ -1,19 +1,37 @@
 server:
   port: ${PORT:8080}
+  shutdown: graceful
 
 spring:
   application:
     name: veyra-backend
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${SUPABASE_ISSUER_URI:}
 
 veyra:
-  maps-base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
-  maps-key: ${GOOGLE_MAPS_SERVER_KEY:}
-  ai-provider: ${AI_PROVIDER:none}
-  ai-api-key: ${AI_API_KEY:}
-  train-base-url: ${TRAIN_API_BASE_URL:}
-  train-api-key: ${TRAIN_API_KEY:}
+  security:
+    jwt-enabled: ${VEYRA_JWT_ENABLED:false}
+  supabase:
+    url: ${SUPABASE_URL:}
+    anon-key: ${SUPABASE_ANON_KEY:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  google:
+    api-key: ${GOOGLE_MAPS_SERVER_KEY:}
+    places-url: ${GOOGLE_PLACES_URL:https://places.googleapis.com/v1}
+    routes-url: ${GOOGLE_ROUTES_URL:https://routes.googleapis.com/directions/v2:computeRoutes}
+    geocode-url: ${GOOGLE_GEOCODE_URL:https://maps.googleapis.com/maps/api/geocode/json}
+  ai:
+    provider: ${AI_PROVIDER:none}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:}
+    base-url: ${AI_BASE_URL:}
+  train:
+    base-url: ${TRAIN_API_BASE_URL:}
+    api-key: ${TRAIN_API_KEY:}
+    search-path: ${TRAIN_API_SEARCH_PATH:/trains/{number}}
+  firebase:
+    service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
