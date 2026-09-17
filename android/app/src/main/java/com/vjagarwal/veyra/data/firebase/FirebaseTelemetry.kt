@@ -6,11 +6,13 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.FirebaseAnalytics
 
 object FirebaseTelemetry {
-    private fun analytics(context: Context): FirebaseAnalytics? = try {
-        if (FirebaseApp.getApps(context).isEmpty()) return null
-        FirebaseAnalytics.getInstance(context)
-    } catch (_: Exception) {
-        null
+    private fun analytics(context: Context): FirebaseAnalytics? {
+        return try {
+            if (FirebaseApp.getApps(context).isEmpty()) null
+            else FirebaseAnalytics.getInstance(context)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun journeyStarted(context: Context, transport: String, protection: String) {
