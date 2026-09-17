@@ -51,10 +51,11 @@ class ProtectionEngine(
             ).coerceIn(0f, 1f)
 
         val zoneReached = distance <= safeRadius
-        val trigger = zoneReached && speedValid && confidence >= 0.62f
+        val trigger = zoneReached && speedValid && accuracy <= safeRadius && confidence >= 0.72f
         val explanation = when {
             trigger -> "Protected wake zone reached"
             !speedValid -> "Movement data rejected as implausible"
+            accuracy > safeRadius -> "GPS uncertainty is larger than the wake zone"
             distance <= safeRadius * 1.5f -> "Near destination; validating GPS confidence"
             else -> "Tracking normally"
         }
