@@ -45,12 +45,10 @@ android {
 
 kotlin { jvmToolchain(17) }
 
-val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
-val firebaseBom = platform("com.google.firebase:firebase-bom:34.19.0")
-
 dependencies {
-    implementation(composeBom)
-    androidTestImplementation(composeBom)
+    implementation(platform("androidx.compose:compose-bom:2026.08.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.08.00"))
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
 
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-compose:1.11.0")
@@ -78,7 +76,6 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
-    implementation(firebaseBom)
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-crashlytics")
