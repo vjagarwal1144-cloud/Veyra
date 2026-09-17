@@ -16,7 +16,7 @@
         android:allowBackup="false"
         android:label="Veyra"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         android:theme="@style/Theme.Veyra">
 
         <activity
