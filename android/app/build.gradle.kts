@@ -77,8 +77,9 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
-    // Optional Firebase integrations. They remain inert until google-services.json is supplied.
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
+
+    testImplementation("junit:junit:4.13.2")
 }
