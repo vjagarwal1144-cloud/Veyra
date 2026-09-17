@@ -1,8 +1,11 @@
 package com.vjagarwal.veyra.ui
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.provider.Settings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,29 +26,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import com.vjagarwal.veyra.core.destination.DestinationSearch
-import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
 
 @Composable
 fun HomeScreen(model: MainViewModel, start: () -> Unit, history: () -> Unit, settings: () -> Unit) {
@@ -155,57 +146,53 @@ private fun DestinationResultRow(result: DestinationSearch.Result, onSelect: () 
 @Composable
 private fun DestinationMapPreview(latitude: Double, longitude: Double, title: String) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val latestLatitude by rememberUpdatedState(latitude)
-    val latestLongitude by rememberUpdatedState(longitude)
-    val latestTitle by rememberUpdatedState(title)
-    val mapView = remember(context) {
-        MapLibre.getInstance(context)
-        MapView(context)
-    }
-    var map by remember { mutableStateOf<MapLibreMap?>(null) }
-    var marker by remember { mutableStateOf<Marker?>(null) }
-
-    DisposableEffect(lifecycleOwner, mapView) {
-        val observer = object : DefaultLifecycleObserver {
-            override fun onCreate(owner: LifecycleOwner) {
-                mapView.onCreate(null)
-                mapView.getMapAsync { readyMap ->
-                    map = readyMap
-                    readyMap.setStyle("https://tiles.openfreemap.org/styles/liberty") {
-                        readyMap.cameraPosition = CameraPosition.Builder()
-                            .target(LatLng(latestLatitude, latestLongitude))
-                            .zoom(15.0)
-                            .build()
-                        marker = readyMap.addMarker(
-                            MarkerOptions()
-                                .position(LatLng(latestLatitude, latestLongitude))
-                                .title(latestTitle)
-                        )
-                    }
-                }
-            }
-
-            override fun onStart(owner: LifecycleOwner) = mapView.onStart()
-            override fun onResume(owner: LifecycleOwner) = mapView.onResume()
-            override fun onPause(owner: LifecycleOwner) = mapView.onPause()
-            override fun onStop(owner: LifecycleOwner) = mapView.onStop()
-            override fun onDestroy(owner: LifecycleOwner) = mapView.onDestroy()
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    LaunchedEffect(latitude, longitude, title) {
-        val readyMap = map ?: return@LaunchedEffect
-        val position = LatLng(latitude, longitude)
-        readyMap.cameraPosition = CameraPosition.Builder().target(position).zoom(15.0).build()
-        marker?.let { readyMap.removeMarker(it) }
-        marker = readyMap.addMarker(MarkerOptions().position(position).title(title))
+    val html = remember(latitude, longitude, title) {
+        val safeTitle = title.replace("'", "\\'")
+        """
+        <!doctype html>
+        <html><head>
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+          <style>html,body,#map{margin:0;width:100%;height:100%;} body{overflow:hidden;} </style>
+        </head><body>
+          <div id="map"></div>
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <script>
+            const lat = $latitude;
+            const lon = $longitude;
+            const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([lat, lon], 15);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            L.marker([lat, lon]).addTo(map).bindPopup('$safeTitle').openPopup();
+          </script>
+        </body></html>
+        """.trimIndent()
     }
 
     AndroidView(
-        factory = { mapView },
+        factory = {
+            WebView(context).apply {
+                setBackgroundColor(Color.TRANSPARENT)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadsImagesAutomatically = true
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                webViewClient = WebViewClient()
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                    WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_OFF)
+                }
+                loadDataWithBaseURL(
+                    "https://appassets.androidplatform.net/",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null
+                )
+            }
+        },
         modifier = Modifier.fillMaxWidth().height(230.dp)
     )
 }
@@ -277,7 +264,7 @@ fun DiagnosticsScreen(back: () -> Unit) {
         Text("Impossible movement jumps: rejected")
         Text("Fallback alarm: AlarmManager")
         Text("Network dependency for alarm: none")
-        Text("Map/search: MapLibre + OpenFreeMap + OpenStreetMap")
+        Text("Map/search: Leaflet + OpenStreetMap")
         Text("OEM force-stop, power loss, revoked permissions, or system restrictions can still prevent app-controlled actions.")
         OutlinedButton(back) { Text("Back") }
     }
