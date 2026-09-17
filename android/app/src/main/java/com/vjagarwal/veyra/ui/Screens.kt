@@ -1,6 +1,7 @@
 package com.vjagarwal.veyra.ui
 
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,10 +32,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(model: MainViewModel, start: () -> Unit, history: () -> Unit, settings: () -> Unit) {
     val safety by model.safety.collectAsState()
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Veyra", style = MaterialTheme.typography.headlineLarge)
         Text("Never miss your stop.", style = MaterialTheme.typography.titleMedium)
         Card(Modifier.fillMaxWidth()) {
@@ -56,10 +54,7 @@ fun PlanJourneyScreen(model: MainViewModel, back: () -> Unit, started: () -> Uni
     var local by remember(current) { mutableStateOf(current) }
     val context = LocalContext.current
 
-    Column(
-        Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Plan protected journey", style = MaterialTheme.typography.headlineSmall)
         Text("Use a destination coordinate, or later connect the optional Places/Maps search backend.")
         OutlinedTextField(local.name, { local = local.copy(name = it) }, Modifier.fillMaxWidth(), label = { Text("Destination name") })
@@ -81,10 +76,7 @@ fun PlanJourneyScreen(model: MainViewModel, back: () -> Unit, started: () -> Uni
 
 @Composable
 fun JourneyScreen(model: MainViewModel, done: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Protected Journey", style = MaterialTheme.typography.headlineSmall)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,8 +121,12 @@ fun SettingsScreen(openDiagnostics: () -> Unit) {
         Text("Location validation: enabled")
         Text("Offline-first protection: enabled")
         Text("Alarm: system alarm stream + vibration")
-        OutlinedButton({ context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)) }) { Text("Exact alarm access") }
-        OutlinedButton({ context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }) { Text("Battery optimization settings") }
+        if (Build.VERSION.SDK_INT >= 31) {
+            OutlinedButton({ context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)) }) { Text("Exact alarm access") }
+        }
+        if (Build.VERSION.SDK_INT >= 23) {
+            OutlinedButton({ context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }) { Text("Battery optimization settings") }
+        }
         Button(openDiagnostics) { Text("Advanced diagnostics") }
     }
 }
