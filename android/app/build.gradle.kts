@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        buildConfigField("String", "BACKEND_BASE_URL", "\"${project.findProperty("veyraBackendUrl") ?: "http://10.0.2.2:8080"}\"")
     }
 
     buildTypes {
