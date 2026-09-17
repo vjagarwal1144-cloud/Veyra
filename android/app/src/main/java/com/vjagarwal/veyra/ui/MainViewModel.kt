@@ -1,9 +1,8 @@
 package com.vjagarwal.veyra.ui
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.Application
-import android.content.Context
+import android.app.NotificationManager
 import android.content.Intent
 import android.location.LocationManager
 import android.media.AudioManager
@@ -48,33 +47,53 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
 
     fun update(plan: Plan) { _plan.value = plan }
 
+    private fun fullScreenAlarmReady(context: Application): Boolean =
+        Build.VERSION.SDK_INT < 34 || context.getSystemService(NotificationManager::class.java)?.canUseFullScreenIntent() == true
+
     fun refreshSafetyState() {
         val context = getApplication<Application>()
         val locationManager = context.getSystemService(LocationManager::class.java)
         val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
         val locationEnabled = locationManager?.isLocationEnabled == true
         val notifications = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        val fullScreenReady = fullScreenAlarmReady(context)
         val alarmPermission = AlarmScheduler.canUseExactAlarm(context)
         val audio = context.getSystemService(AudioManager::class.java)
         val alarmVolumeOk = (audio?.getStreamVolume(AudioManager.STREAM_ALARM) ?: 0) > 0
-        val batteryOk = if (Build.VERSION.SDK_INT >= 23) {
+        val batteryOptimized = if (Build.VERSION.SDK_INT >= 23) {
             val power = context.getSystemService(PowerManager::class.java)
-            power?.isIgnoringBatteryOptimizations(context.packageName) == true
-        } else true
+            power?.isIgnoringBatteryOptimizations(context.packageName) != true
+        } else false
 
         _safety.value = when {
             !fineGranted -> "Location permission is required"
             !locationEnabled -> "Turn on device location"
             !notifications -> "Allow notifications before starting protection"
+            !fullScreenReady -> "Allow full-screen alarm notifications"
             !alarmVolumeOk -> "Increase alarm volume before starting protection"
-            !alarmPermission -> "Exact-alarm access is not granted; fallback timing will be less precise"
-            !batteryOk -> "Battery optimization may reduce reliability on some devices"
+            batteryOptimized -> "Protection ready; battery optimization may reduce OEM background reliability"
+            !alarmPermission -> "Protection ready; exact-alarm access is not granted so the time fallback may be less precise"
             else -> "Protection checks passed"
         }
     }
 
+    private fun safetyBlockReason(context: Application): String? {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) return "Location permission is required"
+        if (context.getSystemService(LocationManager::class.java)?.isLocationEnabled != true) return "Turn on device location"
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return "Allow notifications before starting protection"
+        if (!fullScreenAlarmReady(context)) return "Allow full-screen alarm notifications"
+        val audio = context.getSystemService(AudioManager::class.java)
+        if ((audio?.getStreamVolume(AudioManager.STREAM_ALARM) ?: 0) <= 0) return "Increase alarm volume before starting protection"
+        return null
+    }
+
     fun startJourney(onStarted: () -> Unit) {
         val context = getApplication<Application>()
+        if (safetyBlockReason(context) != null) {
+            refreshSafetyState()
+            return
+        }
+
         val p = _plan.value
         val lat = p.lat.toDoubleOrNull()
         val lon = p.lon.toDoubleOrNull()
@@ -82,12 +101,12 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
         val fallbackMinutes = p.fallbackMinutes.toLongOrNull()
         if (p.name.isBlank() || lat == null || lon == null || wake == null || fallbackMinutes == null) return
         if (lat !in -90.0..90.0 || lon !in -180.0..180.0 || wake < 50f || fallbackMinutes < 5L) return
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
 
         viewModelScope.launch {
             repo.active()?.let { repo.finish(it.id, false) }
             val id = UUID.randomUUID().toString()
-            val fallbackAt = System.currentTimeMillis() + fallbackMinutes * 60_000L
+            val startedAt = System.currentTimeMillis()
+            val fallbackAt = startedAt + fallbackMinutes * 60_000L
             val entity = JourneyEntity(
                 id = id,
                 destinationName = p.name.trim(),
@@ -96,7 +115,7 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
                 wakeDistanceMeters = wake,
                 transport = p.mode,
                 protection = p.protection,
-                startedAt = System.currentTimeMillis(),
+                startedAt = startedAt,
                 fallbackAlarmAt = fallbackAt
             )
             repo.insert(entity)
