@@ -5,6 +5,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.vjagarwal.veyra"
     compileSdk = 35
@@ -41,6 +45,7 @@ android {
 kotlin { jvmToolchain(17) }
 
 val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
+val firebaseBom = platform("com.google.firebase:firebase-bom:34.19.0")
 
 dependencies {
     implementation(composeBom)
@@ -71,4 +76,9 @@ dependencies {
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
+
+    // Optional Firebase integrations. They remain inert until google-services.json is supplied.
+    implementation(firebaseBom)
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-messaging")
 }
