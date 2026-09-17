@@ -7,7 +7,6 @@ import android.provider.Settings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,21 +17,17 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocation
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryAlert
-import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Diagnostics
-import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.EditLocation
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -64,16 +59,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -101,15 +93,8 @@ private fun PageColumn(content: @Composable Column.() -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    model: MainViewModel,
-    start: () -> Unit,
-    history: () -> Unit,
-    saved: () -> Unit,
-    settings: () -> Unit
-) {
+fun HomeScreen(model: MainViewModel, start: () -> Unit, history: () -> Unit, saved: () -> Unit, settings: () -> Unit) {
     val safety by model.safety.collectAsState()
     val savedPlaces by model.savedPlaces.collectAsState()
     val journeys by model.history.collectAsState(initial = emptyList())
@@ -119,10 +104,7 @@ fun HomeScreen(
         Text("Veyra", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Never miss your stop.", style = MaterialTheme.typography.titleMedium)
 
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        ) {
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Lock, null)
@@ -144,7 +126,7 @@ fun HomeScreen(
                     }
                     Text(active.destinationName, style = MaterialTheme.typography.titleMedium)
                     Text("Alarm armed · ${active.wakeDistanceMeters.toInt()} m wake zone · ${active.transport}")
-                    Button({ start() }, Modifier.fillMaxWidth()) { Text("Open Journey") }
+                    Button(start, Modifier.fillMaxWidth()) { Text("Open Journey") }
                 }
             }
         } else {
@@ -194,14 +176,8 @@ private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlanJourneyScreen(
-    model: MainViewModel,
-    back: () -> Unit,
-    safetyCheck: () -> Unit,
-    saved: () -> Unit
-) {
+fun PlanJourneyScreen(model: MainViewModel, back: () -> Unit, safetyCheck: () -> Unit, saved: () -> Unit) {
     val current by model.plan.collectAsState()
     val results by model.searchResults.collectAsState()
     val searching by model.searching.collectAsState()
@@ -234,25 +210,17 @@ fun PlanJourneyScreen(
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         label = { Text("Search destination") }
                     )
-                    Button(
-                        onClick = { model.searchDestinations(query) },
-                        enabled = query.trim().length >= 2 && !searching,
-                        modifier = Modifier.height(56.dp)
-                    ) {
+                    Button(onClick = { model.searchDestinations(query) }, enabled = query.trim().length >= 2 && !searching, modifier = Modifier.height(56.dp)) {
                         if (searching) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Find")
                     }
                 }
-
-                if (results.isNotEmpty()) {
-                    results.take(6).forEach { result ->
-                        DestinationResultRow(result) {
-                            model.selectDestination(result)
-                            local = local.copy(name = result.name, lat = result.latitude.toString(), lon = result.longitude.toString())
-                            query = result.name
-                        }
+                if (results.isNotEmpty()) results.take(6).forEach { result ->
+                    DestinationResultRow(result) {
+                        model.selectDestination(result)
+                        local = local.copy(name = result.name, lat = result.latitude.toString(), lon = result.longitude.toString())
+                        query = result.name
                     }
                 }
-
                 if (savedPlaces.isNotEmpty()) {
                     Text("Recent favourites", style = MaterialTheme.typography.labelLarge)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -268,15 +236,7 @@ fun PlanJourneyScreen(
             DestinationMapPreview(local.lat.toDouble(), local.lon.toDouble(), local.name.ifBlank { "Destination" })
         }
 
-        OutlinedTextField(
-            local.name,
-            { local = local.copy(name = it) },
-            Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text("Destination name") },
-            leadingIcon = { Icon(Icons.Default.LocationOn, null) }
-        )
-
+        OutlinedTextField(local.name, { local = local.copy(name = it) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Destination name") }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(local.lat, { local = local.copy(lat = it) }, Modifier.weight(1f), label = { Text("Latitude") })
             OutlinedTextField(local.lon, { local = local.copy(lon = it) }, Modifier.weight(1f), label = { Text("Longitude") })
@@ -313,7 +273,7 @@ fun PlanJourneyScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton({ model.saveCurrentPlace(); saved() }, Modifier.weight(1f), enabled = local.name.isNotBlank()) {
+            OutlinedButton({ model.update(local); model.saveCurrentPlace(); saved() }, Modifier.weight(1f), enabled = local.name.isNotBlank()) {
                 Icon(Icons.Default.Save, null); Spacer(Modifier.width(6.dp)); Text("Save Place")
             }
             OutlinedButton({ model.clearPlan(); local = model.plan.value }, Modifier.weight(1f)) {
@@ -322,25 +282,20 @@ fun PlanJourneyScreen(
         }
 
         Button({ model.update(local); safetyCheck() }, Modifier.fillMaxWidth().height(56.dp), enabled = local.name.isNotBlank()) {
-            Icon(Icons.Default.Shield, null)
-            Spacer(Modifier.width(8.dp))
-            Text("Continue to Safety Check")
+            Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Continue to Safety Check")
         }
         OutlinedButton({ context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }, Modifier.fillMaxWidth()) {
             Icon(Icons.Default.LocationOn, null); Spacer(Modifier.width(6.dp)); Text("Open device location")
         }
     }
 
-    if (showWakeDialog) {
-        ChoiceDialog("Wake distance", listOf(500, 1000, 2000, 5000), local.wake.toIntOrNull() ?: 1000, { value ->
-            local = local.copy(wake = value.toString()); model.setWakeDistance(value); showWakeDialog = false
-        }, { showWakeDialog = false })
-    }
-    if (showFallbackDialog) {
-        ChoiceDialog("Backup alarm", listOf(30, 60, 90, 120, 180), local.fallbackMinutes.toIntOrNull() ?: 90, { value ->
-            local = local.copy(fallbackMinutes = value.toString()); model.setFallbackMinutes(value); showFallbackDialog = false
-        }, { showFallbackDialog = false })
-    }
+    if (showWakeDialog) ChoiceDialog("Wake distance", listOf(500, 1000, 2000, 5000), local.wake.toIntOrNull() ?: 1000, {
+        local = local.copy(wake = it.toString()); model.setWakeDistance(it); showWakeDialog = false
+    }, { showWakeDialog = false })
+
+    if (showFallbackDialog) ChoiceDialog("Backup alarm", listOf(30, 60, 90, 120, 180), local.fallbackMinutes.toIntOrNull() ?: 90, {
+        local = local.copy(fallbackMinutes = it.toString()); model.setFallbackMinutes(it); showFallbackDialog = false
+    }, { showFallbackDialog = false })
 }
 
 @Composable
@@ -348,14 +303,12 @@ private fun ChoiceDialog(title: String, values: List<Int>, selected: Int, onSele
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                values.forEach { value ->
-                    val label = if (title.contains("distance", true)) "${value} m" else "${value} min"
-                    Button(onClick = { onSelect(value) }, Modifier.fillMaxWidth()) { Text(if (value == selected) "✓ $label" else label) }
-                }
+        text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            values.forEach { value ->
+                val label = if (title.contains("distance", true)) "${value} m" else "${value} min"
+                Button(onClick = { onSelect(value) }, Modifier.fillMaxWidth()) { Text(if (value == selected) "✓ $label" else label) }
             }
-        },
+        } },
         confirmButton = {}
     )
 }
@@ -375,8 +328,7 @@ private fun DestinationMapPreview(latitude: Double, longitude: Double, title: St
     val context = LocalContext.current
     val html = remember(latitude, longitude, title) {
         val safeTitle = title.replace("\\", "\\\\").replace("'", "\\'")
-        """
-        <!doctype html><html><head>
+        """<!doctype html><html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
         <style>html,body,#map{margin:0;width:100%;height:100%;}body{overflow:hidden}</style>
@@ -387,27 +339,21 @@ private fun DestinationMapPreview(latitude: Double, longitude: Double, title: St
         const map=L.map('map',{zoomControl:true}).setView([lat,lon],15);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
         L.marker([lat,lon]).addTo(map).bindPopup('$safeTitle').openPopup();
-        </script></body></html>
-        """.trimIndent()
+        </script></body></html>""".trimIndent()
     }
-    AndroidView(
-        factory = {
-            WebView(context).apply {
-                setBackgroundColor(Color.TRANSPARENT)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadsImagesAutomatically = true
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                webViewClient = WebViewClient()
-                if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                    WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_OFF)
-                }
-                loadDataWithBaseURL("https://appassets.androidplatform.net/", html, "text/html", "UTF-8", null)
-            }
-        },
-        modifier = Modifier.fillMaxWidth().height(230.dp)
-    )
+    AndroidView(factory = {
+        WebView(context).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.loadsImagesAutomatically = true
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            webViewClient = WebViewClient()
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_OFF)
+            loadDataWithBaseURL("https://appassets.androidplatform.net/", html, "text/html", "UTF-8", null)
+        }
+    }, modifier = Modifier.fillMaxWidth().height(230.dp))
 }
 
 @Composable
@@ -415,7 +361,6 @@ fun SafetyCheckScreen(model: MainViewModel, back: () -> Unit, start: () -> Unit)
     val items by model.safetyItems.collectAsState()
     val safety by model.safety.collectAsState()
     val valid = model.planValid()
-
     LaunchedEffect(Unit) { model.refreshSafetyState() }
 
     PageColumn {
@@ -426,17 +371,14 @@ fun SafetyCheckScreen(model: MainViewModel, back: () -> Unit, start: () -> Unit)
                 Text("Confirm the device is ready before arming protection")
             }
         }
-
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(safety, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("${items.count { it.ok }} of ${items.size} checks currently pass")
             }
         }
-
         items.forEach { CheckRow(it.title, it.ok, it.detail) }
         CheckRow("Destination", valid, if (valid) "Valid destination and protection settings" else "Return to planning and complete destination fields")
-
         if (!valid || items.any { !it.ok && it.title in setOf("Precise location", "Device location", "Notifications", "Full-screen alarm", "Alarm volume") }) {
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -446,7 +388,6 @@ fun SafetyCheckScreen(model: MainViewModel, back: () -> Unit, start: () -> Unit)
                 }
             }
         }
-
         Button(start, Modifier.fillMaxWidth().height(56.dp), enabled = valid && items.filter { it.title in setOf("Precise location", "Device location", "Notifications", "Full-screen alarm", "Alarm volume") }.all { it.ok }) {
             Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Start Protected Journey")
         }
@@ -467,7 +408,6 @@ private fun CheckRow(title: String, ok: Boolean, detail: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
     val journeys by model.history.collectAsState(initial = emptyList())
@@ -492,7 +432,6 @@ fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
             }
             AssistChip(onClick = {}, label = { Text("ARMED") })
         }
-
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(active.destinationName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -500,7 +439,6 @@ fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
                 Text("Journey ID: ${active.id.take(8)}…", style = MaterialTheme.typography.bodySmall)
             }
         }
-
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricCard(Icons.Default.Route, "Distance", active.lastDistanceMeters?.let { "${it.toInt()} m" } ?: "Waiting", Modifier.weight(1f))
             MetricCard(Icons.Default.SignalCellularAlt, "Accuracy", active.lastAccuracyMeters?.let { "${it.toInt()} m" } ?: "Waiting", Modifier.weight(1f))
@@ -509,7 +447,6 @@ fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
             MetricCard(Icons.Default.Speed, "GPS", if (active.lastLocationAt != null) "Live" else "Acquiring", Modifier.weight(1f))
             MetricCard(Icons.Default.Bolt, "Alarm", "Armed", Modifier.weight(1f))
         }
-
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Tracking Guardian", style = MaterialTheme.typography.titleLarge)
@@ -518,7 +455,6 @@ fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
                 Text("Internet status is not part of the core alarm decision.", style = MaterialTheme.typography.bodySmall)
             }
         }
-
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Alarm Guardian", style = MaterialTheme.typography.titleLarge)
@@ -527,7 +463,6 @@ fun JourneyScreen(model: MainViewModel, backHome: () -> Unit) {
                 Text("Escalation: vibration + alarm notification + full-screen alarm activity")
             }
         }
-
         OutlinedButton({ context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }, Modifier.fillMaxWidth()) {
             Icon(Icons.Default.LocationOn, null); Spacer(Modifier.width(6.dp)); Text("Open location settings")
         }
@@ -624,14 +559,12 @@ fun SettingsScreen(model: MainViewModel, openDiagnostics: () -> Unit, back: () -
             IconButton(back) { Icon(Icons.Default.ArrowBack, "Back") }
             Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
-
         SettingsSection("Tracking") {
             SettingSwitch("Adaptive tracking", "Increase GPS frequency near the destination", settings.adaptiveTracking) { model.updateSetting("adaptive", it) }
             SettingSwitch("High accuracy", "Prefer the most accurate Android location source", settings.highAccuracy) { model.updateSetting("accuracy", it) }
             SettingSwitch("Geofence backup", "Keep redundant proximity monitoring enabled", settings.geofenceBackup) { model.updateSetting("geofence", it) }
             SettingSwitch("Motion detection", "Use movement signals to reject impossible jumps", settings.motionDetection) { model.updateSetting("motion", it) }
         }
-
         SettingsSection("Alarm") {
             SettingSwitch("Repeat alarm", "Keep escalating until the user stops the alarm", settings.repeatAlarm) { model.updateSetting("repeat", it) }
             SettingSwitch("Vibration", "Use device vibration when the alarm fires", settings.vibration) { model.updateSetting("vibration", it) }
@@ -639,24 +572,18 @@ fun SettingsScreen(model: MainViewModel, openDiagnostics: () -> Unit, back: () -
             Text("Alarm stream volume is controlled by Android system settings.")
             OutlinedButton({ context.startActivity(Intent(Settings.ACTION_SOUND_SETTINGS)) }, Modifier.fillMaxWidth()) { Text("Open sound settings") }
         }
-
         SettingsSection("Reliability") {
             SettingSwitch("Battery warnings", "Warn when OEM battery optimization may affect reliability", settings.batteryWarnings) { model.updateSetting("battery", it) }
             SettingSwitch("Internet warnings", "Show optional network availability warnings", settings.internetWarnings) { model.updateSetting("internet", it) }
             OutlinedButton({ context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }, Modifier.fillMaxWidth()) { Icon(Icons.Default.BatteryAlert, null); Spacer(Modifier.width(6.dp)); Text("Battery optimization") }
-            if (Build.VERSION.SDK_INT >= 31) {
-                OutlinedButton({ context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)) }, Modifier.fillMaxWidth()) { Text("Exact alarm access") }
-            }
+            if (Build.VERSION.SDK_INT >= 31) OutlinedButton({ context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)) }, Modifier.fillMaxWidth()) { Text("Exact alarm access") }
         }
-
-        SettingsSection("Privacy & data") {
-            Text("Journey records and saved places are stored locally on this device unless cloud features are explicitly connected.")
-            OutlinedButton({}, Modifier.fillMaxWidth()) { Text("Local data export — coming next") }
-            OutlinedButton({}, Modifier.fillMaxWidth()) { Text("Delete local journey history — coming next") }
+        SettingsSection("Privacy & local data") {
+            Text("Journey records and saved places are stored locally on this device unless cloud features are connected.")
+            Text("Export and deletion controls will be added when cloud sync is enabled; no data is silently uploaded by this screen.", style = MaterialTheme.typography.bodySmall)
         }
-
         SettingsSection("Diagnostics") {
-            Button(openDiagnostics, Modifier.fillMaxWidth()) { Icon(Icons.Default.Diagnostics, null); Spacer(Modifier.width(6.dp)); Text("Open advanced diagnostics") }
+            Button(openDiagnostics, Modifier.fillMaxWidth()) { Icon(Icons.Default.BugReport, null); Spacer(Modifier.width(6.dp)); Text("Open advanced diagnostics") }
         }
     }
 }
@@ -664,7 +591,11 @@ fun SettingsScreen(model: MainViewModel, openDiagnostics: () -> Unit, back: () -
 @Composable
 private fun SettingsSection(title: String, content: @Composable Column.() -> Unit) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = { Text(title, style = MaterialTheme.typography.titleLarge); Divider(); content() })
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Divider()
+            content()
+        }
     }
 }
 
@@ -684,41 +615,35 @@ fun DiagnosticsScreen(model: MainViewModel, back: () -> Unit) {
     val context = LocalContext.current
     val safety by model.safety.collectAsState()
     val items by model.safetyItems.collectAsState()
-
     PageColumn {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(back) { Icon(Icons.Default.ArrowBack, "Back") }
             Column(Modifier.weight(1f)) {
                 Text("Diagnostics", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("See the protection stack and test local capabilities")
+                Text("Protection stack and local capability tests")
             }
         }
-
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Overall", style = MaterialTheme.typography.titleMedium)
                 Text(safety, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
         }
-
         items.forEach { CheckRow(it.title, it.ok, it.detail) }
-
         SettingsSection("Protection engine") {
             InfoRow(Icons.Default.LocationOn, "GPS watchdog", "Tracks location freshness and validates reported fixes")
             InfoRow(Icons.Default.Speed, "Movement validation", "Rejects implausible speeds and jumps")
             InfoRow(Icons.Default.Route, "Proximity engine", "Uses distance, accuracy, movement trend and direction")
             InfoRow(Icons.Default.Bolt, "Alarm fallback", "AlarmManager provides a time-based backup")
         }
-
         SettingsSection("Tests") {
             Button({ model.testAlarm() }, Modifier.fillMaxWidth()) { Icon(Icons.Default.NotificationsActive, null); Spacer(Modifier.width(6.dp)); Text("Test alarm notification") }
             OutlinedButton({ model.refreshSafetyState() }, Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh, null); Spacer(Modifier.width(6.dp)); Text("Run safety checks again") }
             OutlinedButton({ context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }, Modifier.fillMaxWidth()) { Text("Open location services") }
             OutlinedButton({ context.startActivity(Intent(Settings.ACTION_SOUND_SETTINGS)) }, Modifier.fillMaxWidth()) { Text("Open sound settings") }
         }
-
         SettingsSection("Limitations") {
-            Text("Android and phone manufacturers can stop application-controlled work after force-stop, battery depletion, revoked permission, system restrictions or severe OEM background limits.")
+            Text("Android and phone manufacturers can stop application-controlled work after force-stop, battery depletion, revoked permission or severe OEM background limits.")
             Text("The app is designed for reliability, not a 100% guarantee.")
         }
     }
