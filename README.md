@@ -80,8 +80,6 @@ Create an Android app in Firebase with package name `com.vjagarwal.veyra`, downl
 
 The repository contains `android/app/google-services.json.example` as a template. The real file is ignored by Git.
 
-Firebase's current Android setup uses the Google Services Gradle plugin and the Firebase Android BoM. citeturn894310search0turn894310search2
-
 ## Supabase setup
 
 Run `supabase/schema.sql` in the Supabase SQL editor. Configure the backend with:
