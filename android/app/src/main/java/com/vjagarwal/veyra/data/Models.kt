@@ -15,5 +15,9 @@ data class JourneyEntity(
     val startedAt: Long,
     val endedAt: Long? = null,
     val alarmTriggered: Boolean = false,
-    val active: Boolean = true
+    val active: Boolean = true,
+    val lastDistanceMeters: Float? = null,
+    val lastAccuracyMeters: Float? = null,
+    val lastLocationAt: Long? = null,
+    val fallbackAlarmAt: Long? = null
 )
