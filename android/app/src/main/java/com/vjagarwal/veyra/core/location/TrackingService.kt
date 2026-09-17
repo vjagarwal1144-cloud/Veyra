@@ -15,32 +15,34 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.vjagarwal.veyra.R
 import com.vjagarwal.veyra.core.alarm.AlarmService
 import com.vjagarwal.veyra.core.safety.ProtectionEngine
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 class TrackingService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var client: com.google.android.gms.location.FusedLocationProviderClient
     private var previous: Location? = null
     private var engine: ProtectionEngine? = null
 
     override fun onCreate() {
-        super.onCreate(); client = LocationServices.getFusedLocationProviderClient(this); createChannel(); startTrackingNotification()
+        super.onCreate()
+        client = LocationServices.getFusedLocationProviderClient(this)
+        createChannel()
+        startTrackingNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val lat = intent?.getDoubleExtra("lat", 0.0) ?: 0.0
         val lon = intent?.getDoubleExtra("lon", 0.0) ?: 0.0
         val wake = intent?.getFloatExtra("wake", 1000f) ?: 1000f
-        if (lat == 0.0 && lon == 0.0) return START_NOT_STICKY
-        engine = ProtectionEngine(lat, lon, wake)
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) { stopSelf(); return START_NOT_STICKY }
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L).setMinUpdateIntervalMillis(2500L).setWaitForAccurateLocation(true).build()
+        if ((lat == 0.0 && lon == 0.0) || lat !in -90.0..90.0 || lon !in -180.0..180.0) return START_NOT_STICKY
+        engine = ProtectionEngine(lat, lon, wake.coerceIn(50f, 100_000f))
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            stopSelf(); return START_NOT_STICKY
+        }
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+            .setMinUpdateIntervalMillis(2500L)
+            .setWaitForAccurateLocation(true)
+            .build()
         client.requestLocationUpdates(request, callback, mainLooper)
         return START_STICKY
     }
@@ -48,19 +50,50 @@ class TrackingService : Service() {
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val location = result.lastLocation ?: return
-            val valid = LocationValidator.validate(location, previous)
+            val old = previous
+            val valid = LocationValidator.validate(location, old)
             if (!valid.accepted) return
+
+            val decision = engine?.evaluate(location, old) ?: return
             previous = location
-            engine?.evaluate(location, previous)?.let { decision -> if (decision.shouldAlarm) { client.removeLocationUpdates(this); ContextCompat.startForegroundService(this@TrackingService, Intent(this@TrackingService, AlarmService::class.java).setAction(AlarmService.ACTION_START)); scope.launch { /* journey is finalized by repository/UI */ } } }
+            if (decision.shouldAlarm) {
+                client.removeLocationUpdates(this)
+                ContextCompat.startForegroundService(
+                    this@TrackingService,
+                    Intent(this@TrackingService, AlarmService::class.java).setAction(AlarmService.ACTION_START)
+                )
+            }
         }
     }
 
     private fun startTrackingNotification() {
-        val n = NotificationCompat.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Veyra protection active").setContentText("Tracking your destination locally").setOngoing(true).build()
-        if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(21, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) else startForeground(21, n)
+        val notification = NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentTitle("Veyra protection active")
+            .setContentText("Tracking your destination locally")
+            .setOngoing(true)
+            .build()
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            startForeground(21, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(21, notification)
+        }
     }
-    private fun createChannel() { if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL, "Journey Tracking", NotificationManager.IMPORTANCE_LOW)) }
-    override fun onDestroy() { client.removeLocationUpdates(callback); scope.cancel(); super.onDestroy() }
+
+    private fun createChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(CHANNEL, "Journey Tracking", NotificationManager.IMPORTANCE_LOW)
+            )
+        }
+    }
+
+    override fun onDestroy() {
+        client.removeLocationUpdates(callback)
+        super.onDestroy()
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
+
     companion object { const val CHANNEL = "veyra_tracking" }
 }
