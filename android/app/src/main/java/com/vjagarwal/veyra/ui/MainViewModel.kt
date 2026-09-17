@@ -18,6 +18,7 @@ import com.vjagarwal.veyra.core.alarm.AlarmScheduler
 import com.vjagarwal.veyra.core.common.JourneyPrefs
 import com.vjagarwal.veyra.core.location.TrackingService
 import com.vjagarwal.veyra.data.JourneyEntity
+import com.vjagarwal.veyra.data.firebase.FirebaseTelemetry
 import com.vjagarwal.veyra.data.JourneyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -121,6 +122,7 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
             repo.insert(entity)
             JourneyPrefs(context).startJourney(id, fallbackAt)
             AlarmScheduler.scheduleBackup(context, fallbackAt)
+            FirebaseTelemetry.journeyStarted(context, p.mode, p.protection)
 
             val intent = Intent(context, TrackingService::class.java)
                 .putExtra("journey_id", id)
@@ -132,7 +134,10 @@ class MainViewModel(app: Application, private val repo: JourneyRepository) : And
     fun finishActive() {
         val context = getApplication<Application>()
         viewModelScope.launch {
-            repo.active()?.let { repo.finish(it.id, false) }
+            repo.active()?.let {
+                repo.finish(it.id, false)
+                FirebaseTelemetry.journeyEnded(context, false)
+            }
             JourneyPrefs(context).clear()
             AlarmScheduler.cancel(context)
             context.stopService(Intent(context, TrackingService::class.java))
