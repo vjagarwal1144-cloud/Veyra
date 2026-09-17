@@ -1,0 +1,19 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: veyra-backend
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_ISSUER_URI:}
+
+veyra:
+  maps-base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
+  maps-key: ${GOOGLE_MAPS_SERVER_KEY:}
+  ai-provider: ${AI_PROVIDER:none}
+  ai-api-key: ${AI_API_KEY:}
+  train-base-url: ${TRAIN_API_BASE_URL:}
+  train-api-key: ${TRAIN_API_KEY:}
