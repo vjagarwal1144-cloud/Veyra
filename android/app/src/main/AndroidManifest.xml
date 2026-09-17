@@ -9,15 +9,55 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <application android:name=".VeyraApplication" android:label="Veyra" android:theme="@style/Theme.Veyra" android:allowBackup="false" android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:exported="true">
+    <application
+        android:name=".VeyraApplication"
+        android:allowBackup="false"
+        android:label="Veyra"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Veyra">
+
+        <activity
+            android:name=".core.alarm.AlarmActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".core.location.TrackingService" android:exported="false" android:foregroundServiceType="location" />
-        <service android:name=".core.alarm.AlarmService" android:exported="false" android:foregroundServiceType="shortService" />
-        <receiver android:name=".core.alarm.AlarmReceiver" android:exported="false" />
+
+        <service
+            android:name=".core.location.TrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <service
+            android:name=".core.alarm.AlarmService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
+
+        <receiver
+            android:name=".core.alarm.AlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".core.boot.BootReceiver"
+            android:directBootAware="true"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
